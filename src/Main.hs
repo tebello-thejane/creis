@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings, OverloadedLists #-}
+
 import Data.List.Split (splitOn)
 import System.Console.Haskeline
-import Data.Sequence (fromList, update)
+import Data.Sequence (fromList)
 import qualified Data.Sequence as Sequence
-import Data.Foldable (toList)
 import qualified Data.Text as Text
 import Data.Text (Text)
 import Data.Monoid ((<>))
@@ -39,20 +39,25 @@ broadReplacements = fromList [
       ("ɪ", "e"),
       ("\768", ""),
       ("\769", ""),
-      ("tš", "ts")
+      ("tš", "ts"),
+      ("ngk", "nk"),
+      ("nyny", "nny"),
+      ("ngng", "nng"),
+      ("nych", "nch"),
+      ("nytš", "ntš")
   ]
 
 cleanEntry :: [Text] -> Text
 cleanEntry entry =
-  (Text.reverse . Text.tail . Text.reverse $ (entry !! 1)) <> (transformEntry broadReplacements cleaned) <> "  --  " <>
+  (Text.reverse . Text.tail . Text.reverse $ (entry !! 1)) <> transformEntry broadReplacements cleaned <> "  --  " <>
   cleaned <> "  --  " <>
-  (entry !! 3) <> " " <> (entry !! 4) <> "  --  " <>
-  (entry !! 0)
+  entry !! 3 <> " " <> entry !! 4 <> "  --  " <>
+  head entry
   where
     cleaned = transformEntry narrowReplacements (entry !! 2)
 
 substs :: Sequence.Seq (Text, Text) ->  Sequence.Seq (Text -> Text)
-substs reps = fmap (uncurry Text.replace) reps
+substs = fmap (uncurry Text.replace)
 
 transformEntry :: Sequence.Seq (Text, Text) -> Text -> Text
 transformEntry reps entry = Fold.foldr (\f el -> f el ) entry (substs reps)
@@ -73,9 +78,7 @@ loop entries = do
     Nothing -> return ()
     Just x -> do
       let n = read x :: Int
-      let entry = (!! n) $ entries
+      let entry = entries !! n
       outputStrLn . Text.unpack . cleanEntry $ entry
       loop entries
-      --putStrLn . (!!2) . (splitOn "\t") . (!!200) $ entries
-
 
