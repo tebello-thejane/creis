@@ -9,8 +9,8 @@ import Data.Text (Text)
 import Data.Monoid ((<>))
 import qualified Data.Foldable as Fold (foldr)
 
-replacements :: Sequence.Seq (Text, Text)
-replacements = fromList [
+narrowReplacements :: Sequence.Seq (Text, Text)
+narrowReplacements = fromList [
       ("\148", "i"),
       ("ö", "ny"),
       ("O", "ɔ"),
@@ -28,14 +28,37 @@ replacements = fromList [
       ("S", "sh")
   ]
 
-substs :: Sequence.Seq (Text -> Text)
-substs = fmap (uncurry Text.replace) replacements
+broadReplacements :: Sequence.Seq (Text, Text)
+broadReplacements = fromList [
+      ("ɔ", "o"),
+      ("qh", "kg"),
+      ("tSh", "ch"),
+      ("X", "g"),
+      ("ɛ", "e"),
+      ("ʊ", "o"),
+      ("ɪ", "e"),
+      ("\768", ""),
+      ("\769", ""),
+      ("tš", "ts")
+  ]
 
-transformEntry :: Text -> Text
-transformEntry entry = Fold.foldr (\f el -> f el ) entry substs
+cleanEntry :: [Text] -> Text
+cleanEntry entry =
+  (Text.reverse . Text.tail . Text.reverse $ (entry !! 1)) <> (transformEntry broadReplacements cleaned) <> "  --  " <>
+  cleaned <> "  --  " <>
+  (entry !! 3) <> " " <> (entry !! 4) <> "  --  " <>
+  (entry !! 0)
+  where
+    cleaned = transformEntry narrowReplacements (entry !! 2)
 
-transformLine :: [Text] -> [Text]
-transformLine ln = toList . update 2 (transformEntry (ln !! 2)) . fromList $ ln
+substs :: Sequence.Seq (Text, Text) ->  Sequence.Seq (Text -> Text)
+substs reps = fmap (uncurry Text.replace) reps
+
+transformEntry :: Sequence.Seq (Text, Text) -> Text -> Text
+transformEntry reps entry = Fold.foldr (\f el -> f el ) entry (substs reps)
+
+--transformLine :: [Text] -> [Text]
+--transformLine ln = toList . update 2 (transformEntry (ln !! 2)) . fromList $ ln
 
 main :: IO ()
 main = do
@@ -50,8 +73,8 @@ loop entries = do
     Nothing -> return ()
     Just x -> do
       let n = read x :: Int
-      let transformedLine = transformLine . (!! n) $ entries
-      outputStrLn . Text.unpack $ (head transformedLine <> " -- " <> (transformedLine !! 2) <> "    " <> (transformedLine !! 3) <> "  " <> (transformedLine !! 4))
+      let entry = (!! n) $ entries
+      outputStrLn . Text.unpack . cleanEntry $ entry
       loop entries
       --putStrLn . (!!2) . (splitOn "\t") . (!!200) $ entries
 
