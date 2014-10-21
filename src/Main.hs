@@ -11,6 +11,15 @@ import Data.Char (toUpper)
 import Data.Function (on)
 import Data.List (find)
 import System.IO.Unsafe (unsafePerformIO) --this will most probably bite me...
+import qualified Text.Regex.Posix as RE
+import Text.Regex.Posix.String
+
+simpleREMatch :: Text -> Text -> Bool
+simpleREMatch rx str =
+  let
+    regex = RE.makeRegex (Text.unpack rx) :: Regex
+  in
+    RE.matchTest regex (Text.unpack str)
 
 narrowReplacements :: Sequence.Seq (Text, Text)
 narrowReplacements = Sequence.fromList [
@@ -79,20 +88,18 @@ substs = fmap (uncurry Text.replace)
 
 transformEntry :: Sequence.Seq (Text, Text) -> Text -> Text
 transformEntry reps entry = Fold.foldr (\f el -> f el ) entry (substs reps)
---transformLine :: [Text] -> [Text]
---transformLine ln = toList . update 2 (transformEntry (ln !! 2)) . fromList $ ln
 
 data InputChoice = Exit | Find Text | Line Int
 
 doPrompt :: InputT IO InputChoice
 doPrompt = do
-  inp <- getInputLine "(F)umana lentswe (ka diRegEx), e-ya mo(l)eng, kapa o kgaots(e)\n:"
+  inp <- getInputLine "(F)umana mantswe (ka diRegEx), e-ya mo(l)eng, kapa o kgaots(e)\n:"
   case inp of
     Nothing -> return Exit
     Just x ->
       case toUpper . head $ x of
         'E' -> return Exit
-        'F' -> return (Find (Text.strip . Text.pack . tail . tail $ x))
+        'F' -> return (Find (Text.strip . Text.pack . tail $ x))
         'L' -> return (Line ((read . tail $ x)::Int))
         _   -> do
           outputStrLn "O entse phoso.\n"
@@ -100,10 +107,10 @@ doPrompt = do
 
 findEntry :: Text -> InputT IO ()
 findEntry s = do
-  let srch = find (\el -> head el == s ) searchableEntries
+  let srch = filter (\el -> simpleREMatch s (head el)) searchableEntries
   case srch of
-    Nothing -> outputStrLn "Ha le yo."
-    Just x -> outputStrLn . Text.unpack . cleanEntry $ x
+    [] -> outputStrLn "Ha le yo."
+    _  -> mapM_ outputStrLn (map (Text.unpack . cleanEntry) srch)
 
 entries :: [[Text]]
 entries = unsafePerformIO $ do
@@ -126,8 +133,7 @@ loop = do
     Line n -> do
       let entry = cleanEntries !! n
       outputStrLn . Text.unpack $ entry
-      loop
     Find s -> do
       findEntry s
-      loop
+  loop
 
