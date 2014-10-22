@@ -8,8 +8,6 @@ import Data.Text (Text)
 import Data.Monoid ((<>))
 import qualified Data.Foldable as Fold (foldr)
 import Data.Char (toUpper)
-import Data.Function (on)
-import Data.List (find)
 import System.IO.Unsafe (unsafePerformIO) --this will most probably bite me...
 import qualified Text.Regex.Posix as RE
 import Text.Regex.Posix.String
@@ -107,10 +105,10 @@ doPrompt = do
 
 findEntry :: Text -> InputT IO ()
 findEntry s = do
-  let srch = filter (\el -> simpleREMatch s (head el)) searchableEntries
+  let srch = filter (simpleREMatch s . head) searchableEntries
   case srch of
     [] -> outputStrLn "Ha le yo."
-    _  -> mapM_ outputStrLn (map (Text.unpack . cleanEntry) srch)
+    _  -> mapM_ (outputStrLn . Text.unpack . cleanEntry) srch
 
 entries :: [[Text]]
 entries = unsafePerformIO $ do
@@ -133,7 +131,8 @@ loop = do
     Line n -> do
       let entry = cleanEntries !! n
       outputStrLn . Text.unpack $ entry
+      loop
     Find s -> do
       findEntry s
-  loop
+      loop
 
