@@ -6,7 +6,7 @@ import qualified Data.Sequence as Sequence
 import qualified Data.Text as Text
 import Data.Text (Text)
 import Data.Monoid ((<>))
-import qualified Data.Foldable as Fold (foldr)
+import qualified Data.Foldable as Fold (foldl)
 import Data.Char (toUpper)
 import System.IO.Unsafe (unsafePerformIO) --this will most probably bite me...
 import qualified Text.Regex.Posix as RE
@@ -35,8 +35,13 @@ narrowReplacements = Sequence.fromList [
       ("tÂ", "tl"),
       ("Ù", "\768"),
       ("Ú", "\769"),
+      ("ny\768", "n\768"),
+      ("ng\768", "n\768"),
+      ("ny\769", "n\769"),
+      ("ng\769", "n\769"),
       ("\143", "tš"),
-      ("S", "sh")
+      ("S", "sh"),
+      ("Â", "tl")
   ]
 
 broadReplacements :: Sequence.Seq (Text, Text)
@@ -50,12 +55,7 @@ broadReplacements = Sequence.fromList [
       ("ɪ", "e"),
       ("\768", ""),
       ("\769", ""),
-      ("tš", "ts"),
-      ("ngk", "nk"),
-      ("nyny", "nny"),
-      ("ngng", "nng"),
-      ("nych", "nch"),
-      ("nytš", "ntš")
+      ("tš", "ts")
   ]
 
 cleanEntry :: [Text] -> Text
@@ -86,7 +86,7 @@ substs :: Sequence.Seq (Text, Text) ->  Sequence.Seq (Text -> Text)
 substs = fmap (uncurry Text.replace)
 
 transformEntry :: Sequence.Seq (Text, Text) -> Text -> Text
-transformEntry reps entry = Fold.foldr (\f el -> f el ) entry (substs reps)
+transformEntry reps entry = Fold.foldl (\cur subst -> subst cur) entry (substs reps)
 
 data InputChoice = Exit | Find Text | Line Int
 
