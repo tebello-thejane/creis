@@ -92,13 +92,15 @@ data InputChoice = Exit | Find Text | Line Int
 
 data LanguageChoice = Sesotho | English
 
-promptText :: LanguageChoice -> String
-promptText Sesotho = "\n(F)umana mantswe (ka diRegEx), e-ya mo(l)eng, kapa o kgaots(e) (enter X to switch to English)\n:"
-promptText English = "\n(F)ind words (using RegExs), go to a (l)ine, or (e)xit (tlanya X ho fetola puo ho Sesotho)\n:"
+data MessageType = Prompt | Mistake | NotFound
 
-mistakeText :: LanguageChoice -> String
-mistakeText Sesotho = "O entse phoso."
-mistakeText English = "You made a mistake."
+messageText :: MessageType -> LanguageChoice -> String
+messageText Prompt Sesotho = "\n(F)umana mantswe (ka diRegEx), e-ya mo(l)eng, kapa o kgaots(e) (enter X to switch to English)\n:"
+messageText Prompt English = "\n(F)ind words (using RegExs), go to a (l)ine, or (e)xit (tlanya X ho fetola puo ho Sesotho)\n:"
+messageText Mistake Sesotho = "O entse phoso."
+messageText Mistake English = "You made a mistake."
+messageText NotFound Sesotho = "Ha le yo."
+messageText NotFound English = "Not found."
 
 switchLang :: LanguageChoice -> LanguageChoice
 switchLang Sesotho = English
@@ -107,7 +109,7 @@ switchLang English = Sesotho
 doPrompt :: StateT LanguageChoice (InputT IO) InputChoice
 doPrompt = do
   curLang <- get
-  inp <- (lift . getInputLine) . promptText $ curLang
+  inp <- (lift . getInputLine) . messageText Prompt $ curLang
   case inp of
     Nothing -> return Exit
     Just x ->
@@ -120,20 +122,21 @@ doPrompt = do
           put newLang
           doPrompt
         _   -> do
-          (lift . outputStrLn) . mistakeText $ curLang
+          (lift . outputStrLn) . messageText Mistake $ curLang
           doPrompt
 
-findEntry :: Text -> InputT IO ()
+findEntry :: Text -> StateT LanguageChoice (InputT IO) ()
 findEntry s = do
   let srch = filter (simpleREMatch s . head) searchableEntries
+  curLang <- get
   case srch of
-    [] -> outputStrLn "Ha le yo."
-    _  -> mapM_ (outputStrLn . Text.unpack . cleanEntry) srch
+    [] -> lift . outputStrLn . messageText NotFound $ curLang
+    _  -> mapM_ (lift . outputStrLn . Text.unpack . cleanEntry) srch
 
 entries :: [[Text]]
 {-# NOINLINE entries #-}
 entries = unsafePerformIO $ do
-  content <- readFile "Tswana.Creissels 1996.txt"
+  content <- readFile "Tswana.Creissels1996.txt"
   return . map (map Text.pack . splitOn "\t") . tail . lines $ content
 
 cleanEntries :: [Text]
@@ -154,6 +157,6 @@ loop = do
       lift . outputStrLn . Text.unpack $ entry
       loop
     Find s -> do
-      lift . findEntry $ s
+      findEntry s
       loop
 
