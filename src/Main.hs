@@ -11,6 +11,7 @@ import Data.Char (toUpper)
 import System.IO.Unsafe (unsafePerformIO) --this will most probably bite me...
 import qualified Text.Regex.Posix as RE
 import Text.Regex.Posix.String
+import Control.Monad.State
 
 simpleREMatch :: Text -> Text -> Bool
 simpleREMatch rx str =
@@ -59,7 +60,7 @@ broadReplacements = Sequence.fromList [
 
 cleanEntry :: [Text] -> Text
 cleanEntry entry =
-  (head cleaned) <> "  --  " <>
+  head cleaned <> "  --  " <>
   (cleaned !! 1) <> "  --  " <>
   (cleaned !! 2) <> " " <> cleaned !! 3 <> "  --  " <>
   cleaned !! 4
@@ -89,9 +90,24 @@ transformEntry reps entry = Fold.foldr (\f el -> f el ) entry (substs reps)
 
 data InputChoice = Exit | Find Text | Line Int
 
-doPrompt :: InputT IO InputChoice
+data LanguageChoice = Sesotho | English
+
+promptText :: LanguageChoice -> String
+promptText Sesotho = "\n(F)umana mantswe (ka diRegEx), e-ya mo(l)eng, kapa o kgaots(e) (enter X to switch to English)\n:"
+promptText English = "\n(F)ind words (using RegExs), go to a (l)ine, or (e)xit (tlanya X ho fetola puo ho Sesotho)\n:"
+
+mistakeText :: LanguageChoice -> String
+mistakeText Sesotho = "O entse phoso."
+mistakeText English = "You made a mistake."
+
+switchLang :: LanguageChoice -> LanguageChoice
+switchLang Sesotho = English
+switchLang English = Sesotho
+
+doPrompt :: StateT LanguageChoice (InputT IO) InputChoice
 doPrompt = do
-  inp <- getInputLine "(F)umana mantswe (ka diRegEx), e-ya mo(l)eng, kapa o kgaots(e)\n:"
+  curLang <- get
+  inp <- (lift . getInputLine) . promptText $ curLang
   case inp of
     Nothing -> return Exit
     Just x ->
@@ -99,8 +115,12 @@ doPrompt = do
         'E' -> return Exit
         'F' -> return (Find (Text.strip . Text.pack . tail $ x))
         'L' -> return (Line ((read . tail $ x)::Int))
+        'X' -> do
+          let newLang = switchLang curLang
+          put newLang
+          doPrompt
         _   -> do
-          outputStrLn "O entse phoso.\n"
+          (lift . outputStrLn) . mistakeText $ curLang
           doPrompt
 
 findEntry :: Text -> InputT IO ()
@@ -111,8 +131,9 @@ findEntry s = do
     _  -> mapM_ (outputStrLn . Text.unpack . cleanEntry) srch
 
 entries :: [[Text]]
+{-# NOINLINE entries #-}
 entries = unsafePerformIO $ do
-  content <- readFile "Tswana.Creissels1996.txt"
+  content <- readFile "Tswana.Creissels 1996.txt"
   return . map (map Text.pack . splitOn "\t") . tail . lines $ content
 
 cleanEntries :: [Text]
@@ -121,18 +142,18 @@ cleanEntries =
 
 main :: IO ()
 main =
-  runInputT defaultSettings loop
+  runInputT defaultSettings (evalStateT loop Sesotho)
 
-loop :: InputT IO ()
+loop :: StateT LanguageChoice (InputT IO) ()
 loop = do
   inp <- doPrompt
   case inp of
     Exit -> return ()
     Line n -> do
       let entry = cleanEntries !! n
-      outputStrLn . Text.unpack $ entry
+      lift . outputStrLn . Text.unpack $ entry
       loop
     Find s -> do
-      findEntry s
+      lift . findEntry $ s
       loop
 
