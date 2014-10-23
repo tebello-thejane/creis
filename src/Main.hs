@@ -12,6 +12,7 @@ import System.IO.Unsafe (unsafePerformIO) --this will most probably bite me...
 import qualified Text.Regex.Posix as RE
 import Text.Regex.Posix.String
 import Control.Monad.State
+import Safe (headMay)
 
 simpleREMatch :: Text -> Text -> Bool
 simpleREMatch rx str =
@@ -112,18 +113,22 @@ doPrompt = do
   inp <- (lift . getInputLine) . messageText Prompt $ curLang
   case inp of
     Nothing -> return Exit
-    Just x ->
-      case toUpper . head $ x of
-        'E' -> return Exit
-        'F' -> return (Find (Text.strip . Text.pack . tail $ x))
-        'L' -> return (Line ((read . tail $ x)::Int))
-        'X' -> do
-          let newLang = switchLang curLang
-          put newLang
-          doPrompt
-        _   -> do
-          (lift . outputStrLn) . messageText Mistake $ curLang
-          doPrompt
+    Just x -> do
+      let comm = headMay x
+      case comm of
+        Nothing -> doPrompt --ignore empty input
+        Just y  ->
+          case toUpper y of
+            'E' -> return Exit
+            'F' -> return (Find (Text.strip . Text.pack . tail $ x))
+            'L' -> return (Line ((read . tail $ x)::Int))
+            'X' -> do
+              let newLang = switchLang curLang
+              put newLang
+              doPrompt
+            _   -> do
+              (lift . outputStrLn) . messageText Mistake $ curLang
+              doPrompt
 
 findEntry :: Text -> StateT LanguageChoice (InputT IO) ()
 findEntry s = do
@@ -133,15 +138,15 @@ findEntry s = do
     [] -> lift . outputStrLn . messageText NotFound $ curLang
     _  -> mapM_ (lift . outputStrLn . Text.unpack . cleanEntry) srch
 
-entries :: [[Text]]
 {-# NOINLINE entries #-}
+entries :: [[Text]]
 entries = unsafePerformIO $ do
   content <- readFile "Tswana.Creissels1996.txt"
   return . map (map Text.pack . splitOn "\t") . tail . lines $ content
 
 cleanEntries :: [Text]
 cleanEntries =
-  map cleanEntry entries
+  map cleanEntry searchableEntries
 
 main :: IO ()
 main =
