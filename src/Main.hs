@@ -13,6 +13,7 @@ import qualified Text.Regex.Posix as RE
 import Text.Regex.Posix.String
 import Control.Monad.State
 import Safe (headMay)
+import Text.Read (readMaybe)
 
 simpleREMatch :: Text -> Text -> Bool
 simpleREMatch rx str =
@@ -42,21 +43,21 @@ narrowReplacements = Sequence.fromList [
       ("ng\769", "n\769"),
       ("\143", "tš"),
       ("S", "sh"),
-      ("Â", "tl")
+      ("Â", "tl"),
+      ("j", "y"),
+      ("\152", "j")
   ]
 
 broadReplacements :: Sequence.Seq (Text, Text)
 broadReplacements = Sequence.fromList [
       ("ɔ", "o"),
-      ("qh", "kg"),
-      ("tSh", "ch"),
-      ("X", "g"),
       ("ɛ", "e"),
       ("ʊ", "o"),
       ("ɪ", "e"),
       ("\768", ""),
       ("\769", ""),
-      ("tš", "ts")
+      ("qh", "kg"),
+      ("tš", "tsh")
   ]
 
 cleanEntry :: [Text] -> Text
@@ -121,14 +122,21 @@ doPrompt = do
           case toUpper y of
             'E' -> return Exit
             'F' -> return (Find (Text.strip . Text.pack . tail $ x))
-            'L' -> return (Line ((read . tail $ x)::Int))
+            'L' -> do
+              let lineNum = readMaybe . tail $ x :: Maybe Int
+              case lineNum of
+                Nothing -> errorAndRetry
+                Just k  -> return (Line k)
             'X' -> do
               let newLang = switchLang curLang
               put newLang
               doPrompt
-            _   -> do
-              (lift . outputStrLn) . messageText Mistake $ curLang
-              doPrompt
+            _   -> errorAndRetry
+  where
+    errorAndRetry = do
+      curLang <- get
+      (lift . outputStrLn) . messageText Mistake $ curLang
+      doPrompt
 
 findEntry :: Text -> StateT LanguageChoice (InputT IO) ()
 findEntry s = do
