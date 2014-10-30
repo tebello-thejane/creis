@@ -56,7 +56,6 @@ broadReplacements = Sequence.fromList [
       ("ɪ", "e"),
       ("\768", ""),
       ("\769", ""),
-      ("qh", "kg"),
       ("tš", "tsh")
   ]
 
