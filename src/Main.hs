@@ -12,7 +12,7 @@ import System.IO.Unsafe (unsafePerformIO) --this will most probably bite me...
 import qualified Text.Regex.Posix as RE
 import Text.Regex.Posix.String
 import Control.Monad.State
-import Safe (headMay)
+import Safe (headMay, atMay)
 import Text.Read (readMaybe)
 
 simpleREMatch :: Text -> Text -> Bool
@@ -146,6 +146,14 @@ findEntry s = do
     [] -> lift . outputStrLn . messageText NotFound $ curLang
     _  -> mapM_ (lift . outputStrLn . Text.unpack . cleanEntry) srch
 
+lineEntry :: Int -> StateT LanguageChoice (InputT IO) ()
+lineEntry n = do
+  let entry = atMay cleanEntries n
+  curLang <- get
+  case entry of
+    Nothing -> lift . outputStrLn . messageText Mistake $ curLang
+    Just l  -> lift . outputStrLn . Text.unpack $ l
+
 {-# NOINLINE entries #-}
 entries :: [[Text]]
 entries = unsafePerformIO $ do
@@ -166,8 +174,7 @@ loop = do
   case inp of
     Exit -> return ()
     Line n -> do
-      let entry = cleanEntries !! n
-      lift . outputStrLn . Text.unpack $ entry
+      lineEntry n
       loop
     Find s -> do
       findEntry s
