@@ -9,8 +9,8 @@ import Data.Monoid ((<>))
 import qualified Data.Foldable as Fold (foldl)
 import Data.Char (toUpper)
 import System.IO.Unsafe (unsafePerformIO) --this will most probably bite me...
-import qualified Text.Regex.Posix as RE
-import Text.Regex.Posix.String
+import qualified Text.Regex.PCRE as RE
+import Text.Regex
 import Control.Monad.State
 import Safe (headMay, atMay)
 import Text.Read (readMaybe)
@@ -18,9 +18,12 @@ import Text.Read (readMaybe)
 simpleREMatch :: Text -> Text -> Bool
 simpleREMatch rx str =
   let
-    regex = RE.makeRegex (Text.unpack rx) :: Regex
+    regex = RE.makeRegex (Text.unpack rx) :: Text.Regex.Regex
   in
     RE.matchTest regex (Text.unpack str)
+
+simpleREReplace :: Text -> Text -> Text -> Text
+simpleREReplace rx repl str = Text.pack $ subRegex (RE.makeRegex . Text.unpack $ rx) (Text.unpack str) (Text.unpack repl)
 
 narrowReplacements :: Sequence.Seq (Text, Text)
 narrowReplacements = Sequence.fromList [
@@ -35,17 +38,23 @@ narrowReplacements = Sequence.fromList [
       ("¿", "ʊ"),
       ("é", "ɪ"),
       ("tÂ", "tl"),
-      ("Ù", "\768"),
-      ("Ú", "\769"),
-      ("ny\768", "n\768"),
-      ("ng\768", "n\768"),
-      ("ny\769", "n\769"),
-      ("ng\769", "n\769"),
+      ("Ù", "\832"),
+      ("Ú", "\833"),
+      ("ny\832", "n\832"),
+      ("ng\832", "n\832"),
+      ("ny\833", "n\833"),
+      ("ng\833", "n\833"),
       ("\143", "tš"),
       ("S", "sh"),
       ("Â", "tl"),
       ("j", "y"),
       ("\152", "j")
+  ]
+
+narrowRERplacements :: Sequence.Seq (Text, Text)
+narrowRERplacements = Sequence.fromList [
+      ("ǹ$", "ng\832"),
+      ("ń$", "ng\833")
   ]
 
 broadReplacements :: Sequence.Seq (Text, Text)
@@ -54,8 +63,8 @@ broadReplacements = Sequence.fromList [
       ("ɛ", "e"),
       ("ʊ", "o"),
       ("ɪ", "e"),
-      ("\768", ""),
-      ("\769", ""),
+      ("\832", ""),
+      ("\833", ""),
       ("tš", "tsh")
   ]
 
@@ -77,7 +86,7 @@ searchableEntry entry = [
     head entry
   ]
   where
-    cleaned = transformEntry narrowReplacements (entry !! 2)
+    cleaned = transformREEntry narrowRERplacements $ transformEntry narrowReplacements (entry !! 2)
 
 searchableEntries :: [[Text]]
 searchableEntries =
@@ -86,8 +95,14 @@ searchableEntries =
 substs :: Sequence.Seq (Text, Text) ->  Sequence.Seq (Text -> Text)
 substs = fmap (uncurry Text.replace)
 
+reSubsts :: Sequence.Seq (Text, Text) ->  Sequence.Seq (Text -> Text)
+reSubsts = fmap (uncurry simpleREReplace)
+
 transformEntry :: Sequence.Seq (Text, Text) -> Text -> Text
 transformEntry reps entry = Fold.foldl (\cur subst -> subst cur) entry (substs reps)
+
+transformREEntry :: Sequence.Seq (Text, Text) -> Text -> Text
+transformREEntry reps entry = Fold.foldl (\cur subst -> subst cur) entry (reSubsts reps)
 
 data InputChoice = Exit | Find Text | Line Int
 
