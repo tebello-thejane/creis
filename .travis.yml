@@ -1,0 +1,18 @@
+language: haskell
+
+before_install:
+  - travis_retry sudo apt-get update
+  - travis_retry sudo apt-get install libpcre3-dev
+  - travis_retry sudo apt-get install libpcre3
+  - travis_retry sudo apt-get install libreadline-dev
+  - travis_retry sudo apt-get install cabal-install ghc
+  - travis_retry cabal install cabal-install
+  - cabal --version
+
+install:
+  - cabal update
+  - ./configure
+
+script:
+  - cabal build
+
