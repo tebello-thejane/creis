@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, OverloadedLists #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 import Data.List.Split (splitOn)
 import System.Console.Haskeline
