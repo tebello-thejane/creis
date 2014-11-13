@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/tebello-thejane/creis.svg?branch=master)](https://travis-ci.org/tebello-thejane/creis)
+
 ##Creissels' wordlist parser and searcher.
 
 This project aims to salvage Creissels' 1996 wordlist. In particular
