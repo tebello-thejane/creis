@@ -1,13 +1,5 @@
 language: haskell
 
-before_install:
-  - cabal update
-  - travis_retry cabal install cabal-install
-  - travis_retry sudo apt-get update
-  - travis_retry sudo apt-get install libreadline-dev
-  - travis_retry sudo apt-get install cabal-install ghc
-  - cabal --version
-
 install:
   - ./configure
 
