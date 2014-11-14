@@ -9,7 +9,7 @@ import Data.Monoid ((<>))
 import qualified Data.Foldable as Fold (foldl)
 import Data.Char (toUpper)
 import System.IO.Unsafe (unsafePerformIO) --this will most probably bite me...
-import qualified Text.Regex.PCRE as RE
+import qualified Text.Regex.Posix as RE
 import Text.Regex
 import Control.Monad.State
 import Safe (headMay, atMay)

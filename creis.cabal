@@ -3,11 +3,12 @@
 
 -- The name of the package.
 name:                creis
-version:             0.1.0.0
-license:             MIT
-license-file:        LICENSE
+version:             0.1.1.0
+license:             PublicDomain
+license-file:        UNLICENSE
 build-type:          Simple
 cabal-version:       >=1.10
+tested-with:         GHC >= 7.6.3 && <= 7.8.3
 
 
 executable creis
@@ -17,9 +18,9 @@ executable creis
                        containers == 0.5.*,
                        text == 1.2.*,
                        haskeline == 0.7.*,
-                       regex-pcre == 0.94.*,
+                       regex-posix == 0.95.*,
                        mtl == 2.2.*,
                        safe == 0.3.*,
-                       regex-compat == 0.95.* 
+                       regex-compat == 0.95.*
   default-language:    Haskell2010
-  
+  ghc-options:         -Wall -O2 -j
