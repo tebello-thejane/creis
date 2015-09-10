@@ -4,8 +4,8 @@
 -- The name of the package.
 name:                creis
 version:             0.1.1.0
-license:             PublicDomain
-license-file:        UNLICENSE
+license:             BSD2
+license-file:        LICENSE
 build-type:          Simple
 cabal-version:       >=1.10
 tested-with:         GHC >= 7.6.3 && <= 7.8.3
